@@ -24,6 +24,17 @@ so you need an internet connection for the first load.
 Click use tool (hold to reel) · **1/2/3** hands / axe / rod · **F** flashlight · **R** swap
 batteries · **Q** eat · **Tab** backpack · **M** map · **Esc** pause & settings.
 
+### Windows .exe
+
+```bash
+./tools/build_exe.sh
+```
+
+That writes `dist/OregonLakehouse.exe`: one self-contained file, about 15 MB, with the
+game and three.js embedded, so it runs offline. Double-click it and the game opens in an
+Edge app window. It quits on its own when you close that window, and saves persist between
+launches.
+
 ## What's in this slice
 
 **Above: the valley.**
