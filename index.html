@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oregon Lakehouse</title>
+<meta name="description" content="A first-person game about living quietly in a lakeside Oregon cabin, until a red sky leads you beneath the mountain.">
+<style>
+  :root {
+    --ink: #e8e2d0; --dim: #9a9484; --panel: rgba(14, 16, 15, 0.92); --edge: #4a4a40; --accent: #d8a040; --red: #c03020;
+  }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; color: var(--ink);
+    font-family: "Courier New", ui-monospace, monospace; }
+  canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: pixelated; }
+  #hud { display: none; position: fixed; inset: 0; pointer-events: none; text-shadow: 1px 1px 0 #000; }
+  #crosshair { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; background: rgba(255,255,255,.7); }
+  #prompt { position: absolute; left: 50%; top: calc(50% + 28px); transform: translateX(-50%); font-size: 15px;
+    background: rgba(0,0,0,.45); padding: 3px 10px; opacity: 0; transition: opacity .15s; white-space: nowrap; }
+  #toasts { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .toast { font-size: 14px; background: rgba(0,0,0,.55); padding: 3px 10px; transition: opacity .5s; }
+  #subtitle { position: absolute; left: 50%; bottom: 150px; transform: translateX(-50%); max-width: min(720px, 90vw); text-align: center;
+    font-size: 17px; font-style: italic; opacity: 0; transition: opacity .8s; color: #f2ead8; }
+  #status { position: absolute; left: 16px; bottom: 16px; font-size: 11px; width: 170px; }
+  .bar-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .bar-row span { width: 58px; color: var(--dim); }
+  .bar { flex: 1; height: 6px; background: rgba(255,255,255,.12); }
+  .bar i { display: block; height: 100%; }
+  #bar-energy { background: #c8a050; } #bar-health { background: #c04a3a; } #bar-battery { background: #e8e0a0; }
+  #clock { position: absolute; right: 16px; top: 14px; font-size: 13px; color: var(--ink); }
+  #hotbar { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; gap: 6px; font-size: 11px; }
+  #hotbar div { padding: 3px 8px; border: 1px solid rgba(255,255,255,.18); background: rgba(0,0,0,.35); color: var(--dim); }
+  #hotbar div.on { color: var(--ink); border-color: var(--accent); }
+  #fishbar { display: none; position: absolute; left: 50%; top: 62%; transform: translateX(-50%); width: 260px; font-size: 11px; }
+  #fishbar .bar { height: 8px; margin: 3px 0; }
+  #fish-prog { background: #6ab0d0; } #fish-tens { background: #9ab0a0; }
+  #panel { display: none; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(620px, calc(100vw - 32px));
+    max-height: calc(100vh - 48px); overflow: auto; background: var(--panel); border: 1px solid var(--edge); padding: 18px 20px; pointer-events: auto; box-sizing: border-box; }
+  #panel h2 { margin: 0 0 8px; font-size: 18px; letter-spacing: .04em; } #panel h3 { font-size: 14px; margin: 8px 0 4px; }
+  #panel .dim, .dim { color: var(--dim); font-size: 12px; }
+  #panel .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
+  #panel button { font: inherit; font-size: 13px; background: #2a2c28; color: var(--ink); border: 1px solid var(--edge); padding: 6px 12px; cursor: pointer; }
+  #panel button:hover:not(:disabled) { border-color: var(--accent); }
+  #panel button:disabled { opacity: .4; cursor: default; }
+  .paper { background: #e9e3d2; color: #222; padding: 16px 18px; box-shadow: 0 2px 0 #000; }
+  .paper h2 { color: #222; } .paper pre { white-space: pre-wrap; font: 14px/1.5 "Courier New", monospace; margin: 0; }
+  .elevlist { display: flex; flex-direction: column; gap: 5px; }
+  .elev { text-align: left; display: flex; gap: 12px; align-items: baseline; }
+  .elev b { width: 48px; color: var(--accent); } .elev.off { opacity: .5; } .elev.scratched b { color: var(--red); text-decoration: line-through; }
+  .elev i { color: var(--dim); font-size: 11px; }
+  table.inv { width: 100%; border-collapse: collapse; font-size: 13px; } table.inv td { padding: 3px 4px; border-bottom: 1px solid #333; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; } .cols ul { padding-left: 18px; font-size: 13px; min-height: 40px; }
+  .upg { border: 1px solid #333; padding: 8px 10px; margin: 6px 0; } .upg p { margin: 2px 0; font-size: 12px; color: var(--dim); }
+  .upg.owned { opacity: .55; } .upg button { margin-top: 4px; }
+  .settings { display: grid; grid-template-columns: 1fr; gap: 6px; font-size: 13px; }
+  .settings label { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .settings select, .settings input { font: inherit; background: #222; color: var(--ink); border: 1px solid #444; max-width: 50%; }
+  #mapc { width: 100%; height: auto; image-rendering: pixelated; border: 1px solid #333; }
+  .endcard { text-align: center; } .endcard h2 { margin: 18px 0; color: #f0c0a0; line-height: 1.5; }
+  #loading { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; font-size: 15px; letter-spacing: .2em; color: var(--dim); pointer-events: none; }
+  #title { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at 50% 70%, rgba(40,10,6,.55), rgba(0,0,0,.92)); text-align: center; padding: 16px; box-sizing: border-box; }
+  #title h1 { font-size: clamp(28px, 6vw, 56px); margin: 0; letter-spacing: .12em; font-weight: normal; color: #efe6d2; }
+  #title .sub { color: var(--dim); margin: 10px 0 28px; font-size: 14px; max-width: 520px; }
+  #title .tag { color: #c07a60; font-style: italic; font-size: 14px; margin-bottom: 30px; }
+  #menu { display: none; flex-direction: column; gap: 10px; align-items: center; }
+  #menu button { font: inherit; font-size: 16px; width: 220px; background: rgba(30,30,28,.9); color: var(--ink); border: 1px solid var(--edge); padding: 10px; cursor: pointer; }
+  #menu button:hover { border-color: var(--accent); }
+  #loadwrap { width: 240px; height: 4px; background: #222; } #loadbar { height: 100%; width: 2%; background: var(--accent); transition: width .2s; }
+  #controls { margin-top: 26px; color: var(--dim); font-size: 12px; line-height: 1.7; }
+  #studio { position: fixed; bottom: 10px; width: 100%; text-align: center; font-size: 11px; color: #555; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud">
+  <div id="crosshair"></div>
+  <div id="prompt"></div>
+  <div id="toasts"></div>
+  <div id="subtitle"></div>
+  <div id="clock"></div>
+  <div id="status">
+    <div class="bar-row"><span id="energy-label">ENERGY</span><div class="bar"><i id="bar-energy"></i></div></div>
+    <div class="bar-row" id="row-health"><span>HEALTH</span><div class="bar"><i id="bar-health"></i></div></div>
+    <div class="bar-row" id="row-battery"><span>LIGHT [F]</span><div class="bar"><i id="bar-battery"></i></div></div>
+  </div>
+  <div id="hotbar"><div id="tool-hands">1 hands</div><div id="tool-axe">2 axe</div><div id="tool-rod">3 rod</div></div>
+  <div id="fishbar"><div id="fish-label">REEL</div>
+    <div class="bar"><i id="fish-prog"></i></div><div class="bar"><i id="fish-tens"></i></div></div>
+</div>
+<div id="panel"></div>
+<div id="loading"></div>
+
+<div id="title">
+  <h1>OREGON LAKEHOUSE</h1>
+  <div class="sub">A cabin by a lake in the Oregon woods. Rain on the roof. Trout in the shallows. Nothing you have to do.</div>
+  <div class="tag">Some days you fish. Some days you descend into the impossible.</div>
+  <div id="loadwrap"><div id="loadbar"></div></div>
+  <div id="menu">
+    <button id="btn-continue">Continue</button>
+    <button id="btn-new">New vacation</button>
+    <button id="btn-settings">Settings</button>
+  </div>
+  <div id="controls">WASD walk · Shift run · Mouse look · E interact · Click use tool<br>
+    1/2/3 hands / axe / rod · F flashlight · Q eat · Tab backpack · M map · Esc pause</div>
+</div>
+<div id="studio">Bad Ideas Works — working title. CC0 art: Quaternius, Poly Haven. Sound: synthesized.</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

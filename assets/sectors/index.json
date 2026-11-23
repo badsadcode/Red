@@ -1,0 +1,51 @@
+[
+ {
+  "id": "b1",
+  "code": "B-1",
+  "name": "Administration & Security",
+  "theme": "admin",
+  "file": "sectors/b1.json"
+ },
+ {
+  "id": "b2",
+  "code": "B-2",
+  "name": "Commons & Residential",
+  "theme": "residential",
+  "file": "sectors/b2.json"
+ },
+ {
+  "id": "b3",
+  "code": "B-3",
+  "name": "Research Laboratories",
+  "theme": "research",
+  "file": "sectors/b3.json"
+ },
+ {
+  "id": "b4",
+  "code": "B-4",
+  "name": "Hydroponics & Biosciences",
+  "theme": "hydro",
+  "file": "sectors/b4.json"
+ },
+ {
+  "id": "b5",
+  "code": "B-5",
+  "name": "Power & Reactor",
+  "theme": "reactor",
+  "file": "sectors/b5.json"
+ },
+ {
+  "id": "b6",
+  "code": "B-6",
+  "name": "Flooded Maintenance",
+  "theme": "flooded",
+  "file": "sectors/b6.json"
+ },
+ {
+  "id": "b7",
+  "code": "B-7",
+  "name": "(no label)",
+  "theme": "deep",
+  "file": "sectors/b7.json"
+ }
+]
