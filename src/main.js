@@ -232,8 +232,11 @@ function setupTitle() {
   const cont = document.getElementById('btn-continue');
   if (!save) cont.style.display = 'none';
   cont.onclick = () => start(save);
-  document.getElementById('btn-new').onclick = () => {
-    if (save && !confirm('Start over? Your current save will be replaced.')) return;
+  const btnNew = document.getElementById('btn-new');
+  let armed = false;
+  btnNew.onclick = () => {
+    // in-page confirmation (no confirm() dialogs: some hosts block them)
+    if (save && !armed) { armed = true; btnNew.textContent = 'Really start over?'; return; }
     start(null);
   };
   document.getElementById('btn-settings').onclick = () => { G.hud.pauseMenu(); };

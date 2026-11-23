@@ -237,7 +237,7 @@ export class Game {
       const strength = f.power * (this.S.upgrades.reel ? 0.75 : 1);
       if (reeling) {
         f.progress += dt * (f.pull ? 0.04 : 0.2);
-        f.tension += dt * (f.pull ? 0.95 * strength : 0.18 * strength);
+        f.tension += dt * (f.pull ? 0.95 * strength : 0.1 * strength);   // calm reeling is safe; pulls are not
         if (!this.reelLoop) this.reelLoop = G.audio.startLoop('reel', { volume: 0.5 });
       } else {
         f.tension -= dt * 0.7;
