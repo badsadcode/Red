@@ -34,12 +34,14 @@ function rawHeight(x, z) {
   h += fbm(x * 0.05, z * 0.05, 2) * 0.8 * smoothstep(0.97, 1.1, d);
   // the northern ridge
   if (z < -196) {
+    // steep at the foot (the cliff with the door), then a long shoulder up to ~110 m
     const t = -196 - z;
-    h += t * 2.3 + fbm(x * 0.03, z * 0.03, 3) * 6 * smoothstep(0, 20, t);
+    const rise = t < 25 ? t * 2.3 : 57.5 + Math.min(55, (t - 25) * 0.45);
+    h += rise + fbm(x * 0.03, z * 0.03, 3) * 6 * smoothstep(0, 20, t);
   }
-  // valley rim
+  // valley rim (kept low enough that the sky stays the sky)
   const r = Math.hypot(x, z * 1.15);
-  if (r > 300) h += Math.pow((r - 300) / 130, 2) * 120 + fbm(x * 0.01, z * 0.01, 3) * 25 * smoothstep(300, 420, r);
+  if (r > 300) h += Math.min(85, Math.pow((r - 300) / 130, 2) * 85) + fbm(x * 0.01, z * 0.01, 3) * 18 * smoothstep(300, 420, r);
   return h;
 }
 
@@ -75,6 +77,7 @@ void main() {
   vDir = normalize(position);
   vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   gl_Position = p.xyww;
+  gl_Position.z = gl_Position.w * 0.99995;   // just inside the far plane, or it gets clipped
 }`;
 
 const SKY_FRAG = /* glsl */`
@@ -1201,7 +1204,11 @@ export class Surface {
     for (const k of ['cover', 'rain', 'fog', 'wind']) w[k] = damp(w[k], target[k], 1, rate);
   }
 
-  setWeather(name) { this.weather.name = name; Object.assign(this.weather, WEATHER[name]); }
+  setWeather(name) {
+    const w = this.weather;
+    w.name = name; Object.assign(w, WEATHER[name]);
+    w.nextAbs = this.G.state.day * 24 + this.G.state.hour + 3 + Math.random() * 3;
+  }
 
   startRedSky() {
     this.redT = 0;

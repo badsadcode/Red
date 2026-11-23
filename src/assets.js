@@ -21,6 +21,13 @@ export async function loadAssets(onProgress) {
   await Promise.all(names.map(async (name) => {
     const info = manifest.models[name];
     try {
+      if (info.file.endsWith('.json')) {
+        // packed model (tools/pack_models_json.py) for hosts that won't serve .glb
+        const r = await fetch(BASE + info.file);
+        geoms.set(name, unpackModel(await r.json(), info));
+        done++; onProgress && onProgress(done / Math.max(1, names.length));
+        return;
+      }
       const gltf = await loader.loadAsync(BASE + info.file);
       const parts = [];
       gltf.scene.updateMatrixWorld(true);
@@ -53,6 +60,32 @@ export async function loadAssets(onProgress) {
     done++;
     onProgress && onProgress(done / Math.max(1, names.length));
   }));
+}
+
+function b64(str, Type) {
+  const bin = atob(str), bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Type(bytes.buffer);
+}
+
+function unpackModel(d, info) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(b64(d.pos, Float32Array), 3));
+  if (d.nor) g.setAttribute('normal', new THREE.BufferAttribute(b64(d.nor, Float32Array), 3));
+  const n = g.attributes.position.count;
+  const col = new Float32Array(n * 3);
+  if (d.col) {
+    const c = b64(d.col, Uint8Array), tmp = new THREE.Color();
+    for (let i = 0; i < n; i++) {
+      tmp.setRGB(c[i * 4] / 255, c[i * 4 + 1] / 255, c[i * 4 + 2] / 255, info.colorSpace === 'linear' ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace);
+      col[i * 3] = tmp.r; col[i * 3 + 1] = tmp.g; col[i * 3 + 2] = tmp.b;
+    }
+  } else col.fill(0.7);
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  if (d.idx) g.setIndex(new THREE.BufferAttribute(b64(d.idx, d.idxType === 'u32' ? Uint32Array : Uint16Array), 1));
+  if (!d.nor) g.computeVertexNormals();
+  g.computeBoundingBox(); g.computeBoundingSphere();
+  return g;
 }
 
 function mergeSimple(parts) {
