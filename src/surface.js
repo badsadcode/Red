@@ -1000,8 +1000,10 @@ export class Surface {
     }
     const deck = new THREE.Mesh(new THREE.BoxGeometry(5, 0.2, 5), planks);
     deck.position.set(x, y + 11, z); deck.castShadow = true; deck.receiveShadow = true; S.add(deck);
-    col.add({ x0: x - 2.5, x1: x + 2.5, y0: y + 10.9, y1: y + 11.1, z0: z - 2.5, z1: z + 0.9 });
-    col.add({ x0: x - 2.5, x1: x + 1.5, y0: y + 10.9, y1: y + 11.1, z0: z + 0.9, z1: z + 2.5 });
+    // deck with a hatch over the ladder (east side, between the corner posts)
+    col.add({ x0: x - 2.5, x1: x + 2.5, y0: y + 10.9, y1: y + 11.1, z0: z - 2.5, z1: z + 0.35 });
+    col.add({ x0: x - 2.5, x1: x + 1.5, y0: y + 10.9, y1: y + 11.1, z0: z + 0.35, z1: z + 1.45 });
+    col.add({ x0: x - 2.5, x1: x + 2.5, y0: y + 10.9, y1: y + 11.1, z0: z + 1.45, z1: z + 2.5 });
     // cabin on top
     const roof = new THREE.Mesh(new THREE.ConeGeometry(3.6, 1.6, 4), psxMaterial({ map: tex('roof_shingles') }));
     roof.position.set(x, y + 14.4, z); roof.rotation.y = Math.PI / 4; S.add(roof);
@@ -1023,8 +1025,8 @@ export class Surface {
     for (let k = 0.3; k < 11; k += 0.35) {
       const rung = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.5), wood); rung.position.set(0, k, 0); lad.add(rung);
     }
-    lad.position.set(x + 2.15, y, z + 1.7); S.add(lad);
-    this.ladders.push({ x0: x + 1.55, x1: x + 2.55, z0: z + 1.2, z1: z + 2.3, y0: y - 0.5, y1: y + 11.3 });
+    lad.position.set(x + 2.15, y, z + 0.9); S.add(lad);
+    this.ladders.push({ x0: x + 1.55, x1: x + 2.55, z0: z + 0.4, z1: z + 1.4, y0: y - 0.5, y1: y + 11.3 });
     // an old logbook up there
     this.interact.push({ pos: new THREE.Vector3(x - 1.5, y + 12, z - 1.5), r: 1.6, label: () => 'Fire lookout logbook', act: () => this.G.game.readNote('lookout') });
     const book = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.22), psxMaterial({ color: 0x3a2a1a }));

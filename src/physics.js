@@ -341,6 +341,7 @@ export class Player {
       if (cy + this.height > ceil) cy = ceil - this.height;
       this.y = cy; this.onGround = cy <= g + 0.01;
       this.speed = Math.abs(env.climb);
+      if (env.climb !== 0 && onStep) { this.stepDist += Math.abs(env.climb) * dt; if (this.stepDist > 0.5) { this.stepDist = 0; onStep(0); } }
       this.eyeY = this.y + this.eye;
       return;
     }

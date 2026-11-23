@@ -353,12 +353,7 @@ function loop(now) {
     move.down = I.key('ControlLeft') || I.key('KeyC');
   }
   const env = { speedMul: G.game.speedMul() };
-  const ladders = G.area === 'surface' ? G.surface.ladders : G.under.ladders;
-  for (const L of ladders) {
-    if (P.x > L.x0 && P.x < L.x1 && P.z > L.z0 && P.z < L.z1 && P.y > L.y0 && P.y < L.y1) {
-      if (move.fz !== 0 || move.jump) env.climb = (move.fz > 0 || move.jump ? 2.4 : -2.4);
-    }
-  }
+  updateLadder(dt, move, env);
   if (G.area !== 'surface' && G.under.sector) env.waterY = G.under.waterAt(P.x, P.z);
   if (G.area === 'surface') env.waterY = G.surface.waterAt(P.x, P.z);
   if (started && !traveling) {
@@ -383,6 +378,7 @@ function loop(now) {
       if (safeT > 0.5 && !hazard) { safeT = 0; G.lastSafe = { x: P.x, y: P.y, z: P.z }; }
       if (hazard && G.lastSafe && P.y < G.lastSafe.y - 3) recover('The chasm. You climb out, bleeding.');
     } else airT += dt;
+    if (G.ladder) airT = 0;
     if (airT > 2.6 && G.lastSafe) recover('You fall a long, long way...');
   }
 
@@ -466,6 +462,55 @@ function loop(now) {
   I.endFrame();
   G.frameMs = performance.now() - now;
   G._frames = (G._frames || 0) + 1;
+}
+
+// --- ladders --------------------------------------------------------------------------
+// Grab a ladder by pushing into it (W or Space) while standing in its zone. While on it:
+// W/Space climb, S descends, sideways movement is locked to the ladder (so you can't walk
+// through it), and at the top you step off onto whichever floor is there. C or Ctrl lets go.
+let ladderCool = 0;
+G._updateLadder = (...a) => updateLadder(...a);   // exposed for tests
+function updateLadder(dt, move, env) {
+  const P = G.player;
+  const ladders = G.area === 'surface' ? G.surface.ladders : G.under.ladders;
+  ladderCool = Math.max(0, ladderCool - dt);
+  const inZone = (L, pad = 0) => P.x > L.x0 - pad && P.x < L.x1 + pad && P.z > L.z0 - pad && P.z < L.z1 + pad && P.y > L.y0 - 0.3 && P.y < L.y1 + 0.3;
+  if (G.ladder && (!ladders.includes(G.ladder) || !inZone(G.ladder, 0.6))) G.ladder = null;
+  if (!G.ladder && ladderCool <= 0 && (move.fz > 0 || move.jump)) {
+    G.ladder = ladders.find((L) => inZone(L)) || null;
+  }
+  const L = G.ladder;
+  if (!L) return;
+  const up = move.fz > 0 || move.jump, down = move.fz < 0;
+  // stay on the ladder: no walking, position held inside the ladder's zone
+  move.fx = 0; move.fz = 0; move.jump = false;
+  P.x = clamp(P.x, L.x0 + 0.05, L.x1 - 0.05);
+  P.z = clamp(P.z, L.z0 + 0.05, L.z1 - 0.05);
+  if (move.down) { G.ladder = null; ladderCool = 0.6; return; }
+  if (up && P.y > L.y0 + 1.2) {
+    // near the top: step onto any floor within reach (beside the ladder, at about foot level)
+    let best = null;
+    for (let a = 0; a < 16; a++) {
+      const dx = Math.cos(a * Math.PI / 8), dz = Math.sin(a * Math.PI / 8);
+      for (const dist of [0.7, 1.0, 1.4]) {
+        const x = P.x + dx * dist, z = P.z + dz * dist;
+        const g = G.collider.groundAt(x, z, P.y + 0.6);
+        if (!isFinite(g) || g < P.y - 0.25 || g < L.y0 + 1.2) continue;
+        const ceil = G.collider.ceilingAt(x, z, g + 0.05);
+        if (ceil - g < P.height + 0.02) continue;
+        if (!best || dist < best.dist) best = { x, z, g, dist };
+        break;
+      }
+    }
+    if (best) {
+      P.place(best.x, best.g + 0.02, best.z, P.yaw);
+      G.ladder = null; ladderCool = 0.6;
+      return;
+    }
+  }
+  if (down && P.onGround && P.y <= L.y0 + 0.8) { G.ladder = null; ladderCool = 0.5; return; }
+  // never climb off the top of a ladder into thin air
+  env.climb = up ? (P.y < L.y1 - 0.25 ? 2.4 : 0) : down ? -2.4 : 0;
 }
 
 function recover(msg) {
